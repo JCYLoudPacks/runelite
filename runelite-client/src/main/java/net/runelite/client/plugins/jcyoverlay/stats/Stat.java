@@ -22,56 +22,37 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package net.runelite.client.plugins.itemstats;
+package net.runelite.client.plugins.jcyoverlay.stats;
 
-import java.awt.Color;
+import net.runelite.api.Client;
+import net.runelite.api.Skill;
 
 /**
- * OverlayColor represents how positive or negative a stat change is. This is
- * turned into the color shown to the user in the toolip.
+ * Abstract stat of a player.
+ * This includes {@link Skill}s and other player variables, such as <code>RUN_ENERGY</code>.
+ * @see Stats
  */
-public enum Positivity
+public abstract class Stat
 {
-	/**
-	 * The stat is lower than it was before.
-	 */
-	WORSE,
-	/**
-	 * There is no change, ie: The stat is already capped.
-	 */
-	NO_CHANGE,
-	/**
-	 * The stat change goes over the cap, but does not net 0
-	 */
-	BETTER_CAPPED,
-	/**
-	 * Some stat changes were fully consumed, some were not. This should NOT
-	 * be returned by a single stat change. This should only be used by a
-	 * <code>StatChangeCalculator</code>
-	 */
-	BETTER_SOMECAPPED,
-	/**
-	 * The stat change is fully consumed. NB: a boost that hits the cap, but
-	 * does not go over it is still considered <code>BETTER_UNCAPPED</code>
-	 */
-	BETTER_UNCAPPED;
+	private final String name;
 
-	public static Color getColor(ItemStatConfig config, Positivity positivity)
+	Stat(String name)
 	{
-		switch (positivity)
-		{
-			case BETTER_UNCAPPED:
-				return config.colorBetterUncapped();
-			case BETTER_SOMECAPPED:
-				return config.colorBetterSomeCapped();
-			case BETTER_CAPPED:
-				return config.colorBetterCapped();
-			case NO_CHANGE:
-				return config.colorNoChange();
-			case WORSE:
-				return config.colorWorse();
-			default:
-				return Color.WHITE;
-		}
+		this.name = name;
 	}
+
+	public String getName()
+	{
+		return name;
+	}
+
+	/**
+	 * Get the current stat value including any boosts or damage.
+	 */
+	public abstract int getValue(Client client);
+
+	/**
+	 * Get the base stat maximum, ie. the bottom half of the stat fraction.
+	 */
+	public abstract int getMaximum(Client client);
 }

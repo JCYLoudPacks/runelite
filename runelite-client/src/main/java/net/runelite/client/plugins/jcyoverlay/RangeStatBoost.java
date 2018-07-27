@@ -22,56 +22,53 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package net.runelite.client.plugins.itemstats;
+package net.runelite.client.plugins.jcyoverlay;
 
-import java.awt.Color;
+import net.runelite.api.Client;
 
-/**
- * OverlayColor represents how positive or negative a stat change is. This is
- * turned into the color shown to the user in the toolip.
- */
-public enum Positivity
+public class RangeStatBoost extends SingleEffect
 {
-	/**
-	 * The stat is lower than it was before.
-	 */
-	WORSE,
-	/**
-	 * There is no change, ie: The stat is already capped.
-	 */
-	NO_CHANGE,
-	/**
-	 * The stat change goes over the cap, but does not net 0
-	 */
-	BETTER_CAPPED,
-	/**
-	 * Some stat changes were fully consumed, some were not. This should NOT
-	 * be returned by a single stat change. This should only be used by a
-	 * <code>StatChangeCalculator</code>
-	 */
-	BETTER_SOMECAPPED,
-	/**
-	 * The stat change is fully consumed. NB: a boost that hits the cap, but
-	 * does not go over it is still considered <code>BETTER_UNCAPPED</code>
-	 */
-	BETTER_UNCAPPED;
+	private final StatBoost a;
+	private final StatBoost b;
 
-	public static Color getColor(ItemStatConfig config, Positivity positivity)
+	RangeStatBoost(StatBoost a, StatBoost b)
 	{
-		switch (positivity)
+		assert a.getStat() == b.getStat();
+
+		this.a = a;
+		this.b = b;
+	}
+
+	@Override
+	public StatChange effect(Client client)
+	{
+		final StatChange a = this.a.effect(client);
+		final StatChange b = this.b.effect(client);
+
+		final StatChange r = new StatChange();
+		r.setAbsolute(concat(a.getAbsolute(), b.getAbsolute()));
+		r.setRelative(concat(a.getRelative(), b.getRelative()));
+		r.setTheoretical(concat(a.getTheoretical(), b.getTheoretical()));
+		r.setStat(a.getStat());
+
+		final int avg = (a.getOverlayColor().ordinal() + b.getOverlayColor().ordinal()) / 2;
+		r.setOverlayColor(OverlayColor.values()[avg]);
+
+		return r;
+	}
+
+	private String concat(String a, String b)
+	{
+		// If they share a operator, strip b's duplicate
+		if (a.length() > 1 && b.length() > 1)
 		{
-			case BETTER_UNCAPPED:
-				return config.colorBetterUncapped();
-			case BETTER_SOMECAPPED:
-				return config.colorBetterSomeCapped();
-			case BETTER_CAPPED:
-				return config.colorBetterCapped();
-			case NO_CHANGE:
-				return config.colorNoChange();
-			case WORSE:
-				return config.colorWorse();
-			default:
-				return Color.WHITE;
+			final char a0 = a.charAt(0);
+			if ((a0 == '+' || a0 == '-' || a0 == '±') && b.charAt(0) == a0)
+			{
+				b = b.substring(1);
+			}
 		}
+
+		return a + "~" + b;
 	}
 }

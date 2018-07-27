@@ -123,13 +123,15 @@ public class ClientUI
 	@Getter
 	private TrayIcon trayIcon;
 
+	@Getter
+	private ContainableFrame frame;
+
 	private final RuneLiteProperties properties;
 	private final RuneLiteConfig config;
 	private final KeyManager keyManager;
 	private final Applet client;
 	private final ConfigManager configManager;
 	private final CardLayout cardLayout = new CardLayout();
-	private ContainableFrame frame;
 	private JPanel navContainer;
 	private PluginPanel pluginPanel;
 	private ClientPluginToolbar pluginToolbar;

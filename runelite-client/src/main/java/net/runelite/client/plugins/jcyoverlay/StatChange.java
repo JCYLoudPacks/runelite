@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Abex
+ * Copyright (c) 2016-2018, Adam <Adam@sigterm.info>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,56 +22,41 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package net.runelite.client.plugins.itemstats;
+package net.runelite.client.plugins.jcyoverlay;
 
-import java.awt.Color;
+import lombok.Data;
+import net.runelite.client.plugins.jcyoverlay.stats.Stat;
 
 /**
- * OverlayColor represents how positive or negative a stat change is. This is
- * turned into the color shown to the user in the toolip.
+ * A single stat change
  */
-public enum Positivity
+@Data
+public class StatChange
 {
 	/**
-	 * The stat is lower than it was before.
+	 * The stat which will be boosted (or damaged).
 	 */
-	WORSE,
-	/**
-	 * There is no change, ie: The stat is already capped.
-	 */
-	NO_CHANGE,
-	/**
-	 * The stat change goes over the cap, but does not net 0
-	 */
-	BETTER_CAPPED,
-	/**
-	 * Some stat changes were fully consumed, some were not. This should NOT
-	 * be returned by a single stat change. This should only be used by a
-	 * <code>StatChangeCalculator</code>
-	 */
-	BETTER_SOMECAPPED,
-	/**
-	 * The stat change is fully consumed. NB: a boost that hits the cap, but
-	 * does not go over it is still considered <code>BETTER_UNCAPPED</code>
-	 */
-	BETTER_UNCAPPED;
+	private Stat stat;
 
-	public static Color getColor(ItemStatConfig config, Positivity positivity)
-	{
-		switch (positivity)
-		{
-			case BETTER_UNCAPPED:
-				return config.colorBetterUncapped();
-			case BETTER_SOMECAPPED:
-				return config.colorBetterSomeCapped();
-			case BETTER_CAPPED:
-				return config.colorBetterCapped();
-			case NO_CHANGE:
-				return config.colorNoChange();
-			case WORSE:
-				return config.colorWorse();
-			default:
-				return Color.WHITE;
-		}
-	}
+	/**
+	 * Relative change that will occur if the stat boost is applied now.
+	 * Should be a number prefixed by "+" or "-".
+	 */
+	private String relative;
+
+	/**
+	 * Theoretical change that can occur before boost cap is enforced.
+	 * Should be a number prefixed by "+" or "-".
+	 */
+	private String theoretical;
+
+	/**
+	 * Absolute total of the stat after applying the boost.
+	 */
+	private String absolute;
+
+	/**
+	 * How beneficial this stat boost will be to the player.
+	 */
+	private OverlayColor overlayColor;
 }
