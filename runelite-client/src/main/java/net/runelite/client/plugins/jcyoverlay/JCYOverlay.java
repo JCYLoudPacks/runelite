@@ -24,10 +24,13 @@
  */
 package net.runelite.client.plugins.jcyoverlay;
 
+import com.google.common.eventbus.Subscribe;
 import com.google.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.queries.InventoryWidgetItemQuery;
 import net.runelite.api.widgets.WidgetItem;
+import net.runelite.client.input.MouseListener;
+import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.jcyoverlay.stats.Stats;
 import net.runelite.client.ui.overlay.*;
 import net.runelite.client.ui.overlay.tooltip.Tooltip;
@@ -35,6 +38,7 @@ import net.runelite.client.ui.overlay.tooltip.TooltipManager;
 import net.runelite.client.util.QueryRunner;
 
 import java.awt.*;
+import java.awt.event.MouseEvent;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
@@ -47,19 +51,32 @@ public class JCYOverlay extends Overlay
 	private final JCYOverlayConfig config;
 
 	private long lastFlash = 0;
+	private long lastCmbFlash = 0;
 	private boolean lowRender = true;
 
+	private MouseManager mouseManager;
+
 	@Inject
-	private JCYOverlay(QueryRunner queryRunner, Client client, ItemStatChanges statChanges, JCYOverlayConfig config) {
+	private JCYOverlay(QueryRunner queryRunner, Client client, ItemStatChanges statChanges, JCYOverlayConfig config, MouseManager mouseManager) {
 		this.queryRunner = queryRunner;
 		this.client = client;
 		this.statChanges = statChanges;
 		this.config = config;
+		this.mouseManager = mouseManager;
 
 		setPosition(OverlayPosition.DYNAMIC);
 		setPriority(OverlayPriority.LOW);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
-		System.out.println("CONS");
+
+		mouseManager.registerMouseListener(new MouseListener() {
+			@Override
+			public MouseEvent mouseClicked(MouseEvent mouseEvent) {
+				 if(client.getCanvas().getBounds().contains(mouseEvent.getPoint())) {
+					 lastCmbFlash = System.currentTimeMillis();
+				 }
+				return super.mouseClicked(mouseEvent);
+			}
+		});
 	}
 
 	@Override
@@ -86,7 +103,7 @@ public class JCYOverlay extends Overlay
 							case COMBAT: {
 								StatChange sc = Arrays.asList(statsChanges.getStatChanges()).stream().filter(c -> c.getStat().equals(Stats.ATTACK)).findFirst().get();
 								int realBoost = Integer.parseInt(sc.getRelative().replace("+", ""));
-								if (realBoost >= config.combatThresh()) {
+								if (realBoost >= config.combatThresh() && realBoost <  Integer.parseInt(sc.getTheoretical().replace("+", ""))) {
 									Color c = config.colorPotion();
 									graphics.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), (lowRender) ? 160 : 255));
 									graphics.draw(item.getCanvasBounds());
@@ -98,7 +115,7 @@ public class JCYOverlay extends Overlay
 							case OVERLOAD: {
 								StatChange sc = Arrays.asList(statsChanges.getStatChanges()).stream().filter(c -> c.getStat().equals(Stats.ATTACK)).findFirst().get();
 								int realBoost = Integer.parseInt(sc.getRelative().replace("+", ""));
-								if (realBoost >= config.overloadThresh()) {
+								if (realBoost >= config.overloadThresh() && realBoost <  Integer.parseInt(sc.getTheoretical().replace("+", ""))) {
 									Color c = config.colorPotion();
 									graphics.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), (lowRender) ? 160 : 255));
 									graphics.draw(item.getCanvasBounds());
@@ -110,7 +127,7 @@ public class JCYOverlay extends Overlay
 							case SUPER_MAGIC: {
 								StatChange sc = Arrays.asList(statsChanges.getStatChanges()).stream().filter(c -> c.getStat().equals(Stats.MAGIC)).findFirst().get();
 								int realBoost = Integer.parseInt(sc.getRelative().replace("+", ""));
-								if (realBoost >= config.mageThresh()) {
+								if (realBoost >= config.mageThresh() && realBoost <  Integer.parseInt(sc.getTheoretical().replace("+", ""))) {
 									Color c = config.colorPotion();
 									graphics.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), (lowRender) ? 160 : 255));
 									graphics.draw(item.getCanvasBounds());
@@ -122,7 +139,7 @@ public class JCYOverlay extends Overlay
 							case SUPER_RANGE: {
 								StatChange sc = Arrays.asList(statsChanges.getStatChanges()).stream().filter(c -> c.getStat().equals(Stats.RANGED)).findFirst().get();
 								int realBoost = Integer.parseInt(sc.getRelative().replace("+", ""));
-								if (realBoost >= config.rangeThresh()) {
+								if (realBoost >= config.rangeThresh() && realBoost <  Integer.parseInt(sc.getTheoretical().replace("+", ""))) {
 									Color c = config.colorPotion();
 									graphics.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), (lowRender) ? 160 : 255));
 									graphics.draw(item.getCanvasBounds());
@@ -139,11 +156,13 @@ public class JCYOverlay extends Overlay
 			}
 
 			if(config.showOutOfCmb() && client.getLocalPlayer().getInteracting() == null) {
-				Color c = config.colorCombat();
-				graphics.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), (lowRender) ? 160 : 255));
-				graphics.draw(client.getCanvas().getBounds());
-				graphics.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), (lowRender) ? 40 : 80));
-				graphics.fill(client.getCanvas().getBounds());
+				if(System.currentTimeMillis() - lastCmbFlash >= 20000) {
+					Color c = config.colorCombat();
+					graphics.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), (lowRender) ? 160 : 255));
+					graphics.draw(client.getCanvas().getBounds());
+					graphics.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), (lowRender) ? 40 : 80));
+					graphics.fill(client.getCanvas().getBounds());
+				}
 			}
 
 		return null;
