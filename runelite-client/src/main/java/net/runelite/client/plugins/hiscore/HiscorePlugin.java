@@ -31,13 +31,17 @@ import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
-import javax.imageio.ImageIO;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.swing.SwingUtilities;
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ConfigChanged;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.PlayerMenuOptionClicked;
@@ -47,7 +51,8 @@ import net.runelite.client.menus.MenuManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.NavigationButton;
-import net.runelite.client.ui.PluginToolbar;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -63,16 +68,17 @@ public class HiscorePlugin extends Plugin
 	private static final String KICK_OPTION = "Kick";
 	private static final ImmutableList<String> BEFORE_OPTIONS = ImmutableList.of("Add friend", "Remove friend", KICK_OPTION);
 	private static final ImmutableList<String> AFTER_OPTIONS = ImmutableList.of("Message");
+	private static final Pattern BOUNTY_PATTERN = Pattern.compile("<col=ff0000>You've been assigned a target: (.*)</col>");
 
 	@Inject
 	@Nullable
 	private Client client;
 
 	@Inject
-	private PluginToolbar pluginToolbar;
+	private Provider<MenuManager> menuManager;
 
 	@Inject
-	private MenuManager menuManager;
+	private ClientToolbar clientToolbar;
 
 	@Inject
 	private ScheduledExecutorService executor;
@@ -97,11 +103,7 @@ public class HiscorePlugin extends Plugin
 	{
 		hiscorePanel = injector.getInstance(HiscorePanel.class);
 
-		BufferedImage icon;
-		synchronized (ImageIO.class)
-		{
-			icon = ImageIO.read(getClass().getResourceAsStream("normal.png"));
-		}
+		final BufferedImage icon = ImageUtil.getResourceStreamFromClass(getClass(), "normal.png");
 
 		navButton = NavigationButton.builder()
 			.tooltip("Hiscore")
@@ -110,11 +112,11 @@ public class HiscorePlugin extends Plugin
 			.panel(hiscorePanel)
 			.build();
 
-		pluginToolbar.addNavigation(navButton);
+		clientToolbar.addNavigation(navButton);
 
-		if (config.playerOption())
+		if (config.playerOption() && client != null)
 		{
-			menuManager.addPlayerMenuItem(LOOKUP);
+			menuManager.get().addPlayerMenuItem(LOOKUP);
 		}
 		if (config.autocomplete())
 		{
@@ -126,8 +128,12 @@ public class HiscorePlugin extends Plugin
 	protected void shutDown() throws Exception
 	{
 		hiscorePanel.removeInputKeyListener(autocompleter);
-		pluginToolbar.removeNavigation(navButton);
-		menuManager.removePlayerMenuItem(LOOKUP);
+		clientToolbar.removeNavigation(navButton);
+
+		if (client != null)
+		{
+			menuManager.get().removePlayerMenuItem(LOOKUP);
+		}
 	}
 
 	@Subscribe
@@ -135,11 +141,14 @@ public class HiscorePlugin extends Plugin
 	{
 		if (event.getGroup().equals("hiscore"))
 		{
-			menuManager.removePlayerMenuItem(LOOKUP);
-
-			if (config.playerOption())
+			if (client != null)
 			{
-				menuManager.addPlayerMenuItem(LOOKUP);
+				menuManager.get().removePlayerMenuItem(LOOKUP);
+
+				if (config.playerOption())
+				{
+					menuManager.get().addPlayerMenuItem(LOOKUP);
+				}
 			}
 
 			if (event.getKey().equals("autocomplete"))
@@ -192,8 +201,34 @@ public class HiscorePlugin extends Plugin
 			lookup.setType(MenuAction.RUNELITE.getId());
 			lookup.setParam0(event.getActionParam0());
 			lookup.setParam1(event.getActionParam1());
+			lookup.setIdentifier(event.getIdentifier());
 
 			insertMenuEntry(lookup, client.getMenuEntries(), after);
+		}
+	}
+
+	@Subscribe
+	public void onPlayerMenuOptionClicked(PlayerMenuOptionClicked event)
+	{
+		if (event.getMenuOption().equals(LOOKUP))
+		{
+			lookupPlayer(Text.removeTags(event.getMenuTarget()));
+		}
+	}
+
+	@Subscribe
+	public void onChatMessage(ChatMessage event)
+	{
+		if (!config.bountylookup() || !event.getType().equals(ChatMessageType.SERVER))
+		{
+			return;
+		}
+
+		String message = event.getMessage();
+		Matcher m = BOUNTY_PATTERN.matcher(message);
+		if (m.matches())
+		{
+			lookupPlayer(m.group(1));
 		}
 	}
 
@@ -210,30 +245,26 @@ public class HiscorePlugin extends Plugin
 		client.setMenuEntries(newMenu);
 	}
 
-	@Subscribe
-	public void onLookupMenuClicked(PlayerMenuOptionClicked event)
+	private void lookupPlayer(String playerName)
 	{
-		if (event.getMenuOption().equals(LOOKUP))
+		executor.execute(() ->
 		{
-			executor.execute(() ->
+			try
 			{
-				try
+				SwingUtilities.invokeAndWait(() ->
 				{
-					SwingUtilities.invokeAndWait(() ->
+					if (!navButton.isSelected())
 					{
-						if (!navButton.isSelected())
-						{
-							navButton.getOnSelect().run();
-						}
-					});
-				}
-				catch (InterruptedException | InvocationTargetException e)
-				{
-					throw new RuntimeException(e);
-				}
+						navButton.getOnSelect().run();
+					}
+				});
+			}
+			catch (InterruptedException | InvocationTargetException e)
+			{
+				throw new RuntimeException(e);
+			}
 
-				hiscorePanel.lookup(Text.removeTags(event.getMenuTarget()));
-			});
-		}
+			hiscorePanel.lookup(playerName);
+		});
 	}
 }

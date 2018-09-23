@@ -32,9 +32,7 @@ import com.google.inject.Provides;
 import java.awt.Font;
 import java.awt.image.BufferedImage;
 import static java.lang.Math.min;
-import javax.imageio.ImageIO;
 import javax.inject.Inject;
-import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.Experience;
@@ -49,8 +47,9 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.NavigationButton;
-import net.runelite.client.ui.PluginToolbar;
+import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ImageUtil;
 import org.slf4j.LoggerFactory;
 
 @PluginDescriptor(
@@ -58,14 +57,13 @@ import org.slf4j.LoggerFactory;
 	tags = {"panel"},
 	developerPlugin = true
 )
-@Slf4j
 public class DevToolsPlugin extends Plugin
 {
 	@Inject
 	private Client client;
 
 	@Inject
-	private PluginToolbar pluginToolbar;
+	private ClientToolbar clientToolbar;
 
 	@Inject
 	private OverlayManager overlayManager;
@@ -106,6 +104,7 @@ public class DevToolsPlugin extends Plugin
 	private boolean toggleCamera;
 	private boolean toggleWorldMapLocation;
 	private boolean toggleTileLocation;
+	private boolean toggleInteracting;
 
 	Widget currentWidget;
 	int itemIndex = -1;
@@ -130,11 +129,7 @@ public class DevToolsPlugin extends Plugin
 
 		final DevToolsPanel panel = injector.getInstance(DevToolsPanel.class);
 
-		BufferedImage icon;
-		synchronized (ImageIO.class)
-		{
-			icon = ImageIO.read(getClass().getResourceAsStream("devtools_icon.png"));
-		}
+		final BufferedImage icon = ImageUtil.getResourceStreamFromClass(getClass(), "devtools_icon.png");
 
 		navButton = NavigationButton.builder()
 			.tooltip("Developer Tools")
@@ -143,7 +138,7 @@ public class DevToolsPlugin extends Plugin
 			.panel(panel)
 			.build();
 
-		pluginToolbar.addNavigation(navButton);
+		clientToolbar.addNavigation(navButton);
 
 		font = FontManager.getRunescapeFont()
 			.deriveFont(Font.BOLD, 16);
@@ -157,7 +152,7 @@ public class DevToolsPlugin extends Plugin
 		overlayManager.remove(sceneOverlay);
 		overlayManager.remove(cameraOverlay);
 		overlayManager.remove(worldMapLocationOverlay);
-		pluginToolbar.removeNavigation(navButton);
+		clientToolbar.removeNavigation(navButton);
 	}
 
 	@Subscribe
@@ -231,10 +226,7 @@ public class DevToolsPlugin extends Plugin
 				client.getRealSkillLevels()[skill.ordinal()] = level;
 				client.getSkillExperiences()[skill.ordinal()] = totalXp;
 
-				int[] skills = client.getChangedSkills();
-				int count = client.getChangedSkillsCount();
-				skills[++count - 1 & 31] = skill.ordinal();
-				client.setChangedSkillsCount(count);
+				client.queueChangedSkill(skill);
 
 				ExperienceChanged experienceChanged = new ExperienceChanged();
 				experienceChanged.setSkill(skill);
@@ -364,6 +356,11 @@ public class DevToolsPlugin extends Plugin
 		toggleTileLocation = !toggleTileLocation;
 	}
 
+	void toggleInteracting()
+	{
+		toggleInteracting = !toggleInteracting;
+	}
+
 	boolean isTogglePlayers()
 	{
 		return togglePlayers;
@@ -452,5 +449,10 @@ public class DevToolsPlugin extends Plugin
 	boolean isToggleTileLocation()
 	{
 		return toggleTileLocation;
+	}
+
+	boolean isToggleInteracting()
+	{
+		return toggleInteracting;
 	}
 }

@@ -102,6 +102,13 @@ public interface Client extends GameEngine
 	int getRealSkillLevel(Skill skill);
 
 	/**
+	 * Calculates the total level from real skill levels.
+	 *
+	 * @return the total level
+	 */
+	int getTotalLevel();
+
+	/**
 	 * Adds a new chat message to the chatbox.
 	 *
 	 * @param type the type of message
@@ -311,14 +318,14 @@ public interface Client extends GameEngine
 	SpritePixels createItemSprite(int itemId, int quantity, int border, int shadowColor, int stackable, boolean noted, int scale);
 
 	/**
-	 * Loads and creates the sprite image of the passed archive and file IDs.
+	 * Loads and creates the sprite images of the passed archive and file IDs.
 	 *
 	 * @param source the sprite database
 	 * @param archiveId the sprites archive ID
 	 * @param fileId the sprites file ID
 	 * @return the sprite image of the file
 	 */
-	SpritePixels getSprite(IndexDataBase source, int archiveId, int fileId);
+	SpritePixels[] getSprites(IndexDataBase source, int archiveId, int fileId);
 
 	/**
 	 * Gets the sprite index database.
@@ -326,6 +333,13 @@ public interface Client extends GameEngine
 	 * @return the sprite database
 	 */
 	IndexDataBase getIndexSprites();
+
+	/**
+	 * Gets the script index database.
+	 *
+	 * @return the script database
+	 */
+	IndexDataBase getIndexScripts();
 
 	/**
 	 * Returns the x-axis base coordinate.
@@ -441,6 +455,13 @@ public interface Client extends GameEngine
 	 * @return the run energy
 	 */
 	int getEnergy();
+
+	/**
+	 * Gets the current weight of the logged in player.
+	 *
+	 * @return the weight
+	 */
+	int getWeight();
 
 	/**
 	 * Gets an array of options that can currently be used on other players.
@@ -627,12 +648,14 @@ public interface Client extends GameEngine
 	String getVar(VarClientStr varClientStr);
 
 	/**
-	 * Sets the given variable
-	 *
-	 * @param varClientStr
-	 * @param value
+	 * Sets a VarClientString to the passed value
 	 */
 	void setVar(VarClientStr varClientStr, String value);
+
+	/**
+	 * Sets a VarClientInt to the passed value
+	 */
+	void setVar(VarClientInt varClientStr, int value);
 
 	/**
 	 * Sets the value of a given variable.
@@ -907,6 +930,11 @@ public interface Client extends GameEngine
 	int getMouseIdleTicks();
 
 	/**
+	 * Gets the number of milliseconds since the last mouse press occurred.
+	 */
+	long getMouseLastPressedMillis();
+
+	/**
 	 * Gets the amount of ticks since the last keyboard press occurred.
 	 *
 	 * @return amount of idle keyboard ticks
@@ -1005,6 +1033,27 @@ public interface Client extends GameEngine
 	 * @return the friends list
 	 */
 	Friend[] getFriends();
+
+	/**
+	 * Gets the number of friends on the friends list.
+	 *
+	 * @return
+	 */
+	int getFriendsCount();
+
+	/**
+	 * Gets an array of players on the ignore list.
+	 *
+	 * @return
+	 */
+	Ignore[] getIgnores();
+
+	/**
+	 * Gets the number of ignored players on the ignore list.
+	 *
+	 * @return
+	 */
+	int getIgnoreCount();
 
 	/**
 	 * Checks whether a player is in the same clan chat.
@@ -1342,14 +1391,7 @@ public interface Client extends GameEngine
 	@VisibleForDevtools
 	int[] getSkillExperiences();
 
-	@VisibleForDevtools
-	int[] getChangedSkills();
-
-	@VisibleForDevtools
-	int getChangedSkillsCount();
-
-	@VisibleForDevtools
-	void setChangedSkillsCount(int i);
+	void queueChangedSkill(Skill skill);
 
 	/**
 	 * Sets a mapping of sprites to override.
@@ -1419,4 +1461,15 @@ public interface Client extends GameEngine
 	 * @param speed speed
 	 */
 	void setOculusOrbNormalSpeed(int speed);
+
+	/**
+	 * Opens in-game world hopper interface
+	 */
+	void openWorldHopper();
+
+	/**
+	 * Hops using in-game world hopper widget to another world
+	 * @param world target world to hop to
+	 */
+	void hopToWorld(World world);
 }

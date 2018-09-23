@@ -58,6 +58,9 @@ public class PlayerIndicatorsPlugin extends Plugin
 	private PlayerIndicatorsOverlay playerIndicatorsOverlay;
 
 	@Inject
+	private PlayerIndicatorsTileOverlay playerIndicatorsTileOverlay;
+
+	@Inject
 	private PlayerIndicatorsMinimapOverlay playerIndicatorsMinimapOverlay;
 
 	@Inject
@@ -76,6 +79,7 @@ public class PlayerIndicatorsPlugin extends Plugin
 	protected void startUp() throws Exception
 	{
 		overlayManager.add(playerIndicatorsOverlay);
+		overlayManager.add(playerIndicatorsTileOverlay);
 		overlayManager.add(playerIndicatorsMinimapOverlay);
 	}
 
@@ -83,6 +87,7 @@ public class PlayerIndicatorsPlugin extends Plugin
 	protected void shutDown() throws Exception
 	{
 		overlayManager.remove(playerIndicatorsOverlay);
+		overlayManager.remove(playerIndicatorsTileOverlay);
 		overlayManager.remove(playerIndicatorsMinimapOverlay);
 	}
 
@@ -106,7 +111,8 @@ public class PlayerIndicatorsPlugin extends Plugin
 			|| type == PLAYER_FIFTH_OPTION.getId()
 			|| type == PLAYER_SIXTH_OPTION.getId()
 			|| type == PLAYER_SEVENTH_OPTION.getId()
-			|| type == PLAYER_EIGTH_OPTION.getId())
+			|| type == PLAYER_EIGTH_OPTION.getId()
+			|| type == RUNELITE.getId())
 		{
 			final Player localPlayer = client.getLocalPlayer();
 			Player[] players = client.getCachedPlayers();
